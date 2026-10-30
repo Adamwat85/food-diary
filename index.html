@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>יומן אוכל</title>
+<meta name="theme-color" content="#2f4a3a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Layout: one column, sticky top bar with two tabs (היום / שבועי), content cards below */
+:root {
+  --bg: #f3f5ef;
+  --surface: #ffffff;
+  --fg: #1d2a22;
+  --muted: #5e6d63;
+  --line: #dde3d8;
+  --brand: #2f4a3a;
+  --brand-fg: #f3f5ef;
+  --morning: #d99a1e;
+  --morning-soft: #fbf0d6;
+  --noon: #3f8a5a;
+  --noon-soft: #e1f1e6;
+  --evening: #5a4e9c;
+  --evening-soft: #e8e5f6;
+  --danger: #b33a3a;
+  --font-display: system-ui, "Noto Sans Hebrew", "Segoe UI", Arial, sans-serif;
+  --font-body: system-ui, "Noto Sans Hebrew", "Segoe UI", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131a16; --surface: #1c2520; --fg: #e6ece7; --muted: #9aa89f; --line: #2c3831;
+    --brand: #1f3328; --brand-fg: #e6ece7;
+    --morning: #f0b440; --morning-soft: #3a3020;
+    --noon: #6cc28c; --noon-soft: #1f3528;
+    --evening: #a598f0; --evening-soft: #2a2740;
+    --danger: #f07070;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--morning); outline-offset: 2px; }
+
+header {
+  position: sticky; top: 0; z-index: 5;
+  background: var(--brand); color: var(--brand-fg);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.bar {
+  max-width: 900px; margin: 0 auto;
+  padding-block: 12px 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; margin: 0; letter-spacing: .01em; }
+.tabs { display: flex; gap: 4px; margin-top: 10px; }
+.tab {
+  flex: 1; border: 0; background: transparent; color: var(--brand-fg);
+  padding: 10px 8px; border-bottom: 3px solid transparent; opacity: .7; font-weight: 500;
+}
+.tab[aria-selected="true"] { opacity: 1; border-bottom-color: var(--morning); }
+
+main {
+  max-width: 900px; margin: 0 auto;
+  padding-block: 16px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 16px;
+}
+
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.nav h2 { font-size: 1.1rem; margin: 0; text-align: center; flex: 1; font-weight: 500; }
+.nav small { display: block; color: var(--muted); font-size: .85rem; font-weight: 400; }
+.icon-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--surface); font-size: 1.2rem; display: grid; place-items: center; flex: none;
+}
+.link-btn { border: 0; background: none; color: var(--noon); text-decoration: underline; padding: 4px; font-size: .9rem; }
+
+/* add form */
+.add {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px; display: grid; gap: 10px;
+}
+.meal-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.meal-pick button {
+  border: 1px solid var(--line); background: transparent; border-radius: 10px; padding: 8px 4px; font-weight: 500;
+}
+.meal-pick button[aria-pressed="true"][data-meal="morning"] { background: var(--morning-soft); border-color: var(--morning); }
+.meal-pick button[aria-pressed="true"][data-meal="noon"] { background: var(--noon-soft); border-color: var(--noon); }
+.meal-pick button[aria-pressed="true"][data-meal="evening"] { background: var(--evening-soft); border-color: var(--evening); }
+.add-row { display: flex; gap: 8px; }
+.add-row input {
+  flex: 1; min-width: 0; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg);
+}
+.primary {
+  border: 0; border-radius: 10px; background: var(--brand); color: var(--brand-fg);
+  padding: 0 18px; font-weight: 700;
+}
+@media (prefers-color-scheme: dark) { .primary { background: var(--noon); color: #10180f; } }
+
+/* day meals */
+.meals { display: grid; gap: 12px; }
+.meal {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+}
+.meal h3 {
+  margin: 0; padding: 8px 12px; font-size: 1rem; font-weight: 700;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.meal h3 span { font-weight: 400; color: var(--muted); font-size: .85rem; }
+.meal[data-meal="morning"] h3 { background: var(--morning-soft); }
+.meal[data-meal="noon"] h3 { background: var(--noon-soft); }
+.meal[data-meal="evening"] h3 { background: var(--evening-soft); }
+.meal ul { list-style: none; margin: 0; padding: 4px 12px 8px; }
+.meal li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.meal li:last-child { border-bottom: 0; }
+.meal li .t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.meal li time { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.del { border: 0; background: none; color: var(--danger); font-size: 1.1rem; width: 32px; height: 32px; border-radius: 50%; }
+.empty { color: var(--muted); font-size: .9rem; padding: 6px 0; }
+
+/* weekly table */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: .82rem; }
+th, td { border-bottom: 1px solid var(--line); padding: 6px; vertical-align: top; text-align: right; overflow-wrap: anywhere; }
+@media (min-width: 600px) { table { font-size: .95rem; } th, td { padding: 10px; } }
+thead th { position: sticky; top: 0; font-weight: 700; }
+thead th.m-morning { background: var(--morning-soft); }
+thead th.m-noon { background: var(--noon-soft); }
+thead th.m-evening { background: var(--evening-soft); }
+thead th:first-child { background: var(--surface); }
+thead th:first-child { width: 58px; }
+@media (min-width: 600px) { thead th:first-child { width: 90px; } }
+tbody th { font-weight: 500; white-space: nowrap; }
+tbody th small { display: block; color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+tbody tr.today th { color: var(--noon); }
+tbody tr.today { background: color-mix(in srgb, var(--noon-soft) 45%, transparent); }
+tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+td ul { margin: 0; padding: 0 12px 0 0; }
+td .none { color: var(--line); }
+tbody tr { cursor: pointer; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ghost {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 14px; font-weight: 500;
+}
+.stats { color: var(--muted); font-size: .9rem; margin: 0; }
+.toast {
+  position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: .9rem;
+}
+.confirm {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--danger); border-radius: 10px; padding: 10px;
+}
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: no-preference) { .meal li { animation: in .2s ease-out; } }
+@keyframes in { from { opacity: .3; transform: translateY(-3px); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>יומן אוכל</h1>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-day" aria-selected="true">היום</button>
+      <button class="tab" role="tab" id="tab-week" aria-selected="false">טבלה שבועית</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- DAY VIEW -->
+  <section id="view-day" style="display:grid;gap:16px">
+    <div class="nav">
+      <button class="icon-btn" id="day-prev" aria-label="יום קודם">›</button>
+      <h2 id="day-title"></h2>
+      <button class="icon-btn" id="day-next" aria-label="יום הבא">‹</button>
+    </div>
+    <button class="link-btn" id="day-today" hidden>חזרה להיום</button>
+
+    <form class="add" id="add-form" autocomplete="off">
+      <div class="meal-pick" id="meal-pick">
+        <button type="button" data-meal="morning">בוקר</button>
+        <button type="button" data-meal="noon">צהריים</button>
+        <button type="button" data-meal="evening">ערב</button>
+      </div>
+      <div class="add-row">
+        <input id="food-input" maxlength="200" list="food-suggest" placeholder="מה אכלת? למשל: חביתה ולחם" enterkeyhint="done" aria-label="מה אכלת">
+        <button class="primary" type="submit">הוסף</button>
+      </div>
+      <datalist id="food-suggest"></datalist>
+    </form>
+
+    <div class="meals" id="meals"></div>
+  </section>
+
+  <!-- WEEK VIEW -->
+  <section id="view-week" hidden style="display:grid;gap:16px">
+    <div class="nav">
+      <button class="icon-btn" id="week-prev" aria-label="שבוע קודם">›</button>
+      <h2 id="week-title"></h2>
+      <button class="icon-btn" id="week-next" aria-label="שבוע הבא">‹</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>יום</th>
+            <th class="m-morning">בוקר</th>
+            <th class="m-noon">צהריים</th>
+            <th class="m-evening">ערב</th>
+          </tr>
+        </thead>
+        <tbody id="week-body"></tbody>
+      </table>
+    </div>
+    <p class="stats" id="week-stats"></p>
+    <div class="actions">
+      <button class="ghost" id="share-week">שתף / העתק טבלה</button>
+      <button class="ghost" id="csv-week">הורד כקובץ אקסל (CSV)</button>
+    </div>
+    <details>
+      <summary class="stats">גיבוי ושחזור נתונים</summary>
+      <div class="actions" style="margin-top:10px">
+        <button class="ghost" id="backup">שמור גיבוי</button>
+        <label class="ghost" for="restore">שחזר מגיבוי</label>
+        <input type="file" id="restore" accept="application/json" hidden>
+        <button class="ghost" id="clear-week" style="color:var(--danger)">מחק את השבוע הזה</button>
+      </div>
+      <div class="confirm" id="clear-confirm" hidden style="margin-top:10px">
+        <span>למחוק את כל הרשומות של השבוע?</span>
+        <button class="ghost" id="clear-yes" style="color:var(--danger)">כן, מחק</button>
+        <button class="ghost" id="clear-no">ביטול</button>
+      </div>
+    </details>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
